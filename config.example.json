@@ -1,0 +1,8 @@
+{
+  "name": "Dylan",
+  "friend": "Sam",
+  "limit_minutes": 240,
+  "share_repo": "git@github.com:you/island-share.git",
+  "iphone_device_id": null,
+  "source": "auto"
+}

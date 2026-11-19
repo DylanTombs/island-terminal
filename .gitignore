@@ -1,0 +1,13 @@
+config.json
+.island/
+data/*.json
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+*.pyc
+.DS_Store
+
+# personal / large local-only files
+preview.py
+assets/scenes.png
