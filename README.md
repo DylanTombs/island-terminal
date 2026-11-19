@@ -1,5 +1,7 @@
 # island (terminal edition)
 
+[![test](https://github.com/DylanTombs/island-terminal/actions/workflows/test.yml/badge.svg)](https://github.com/DylanTombs/island-terminal/actions/workflows/test.yml)
+
 A weekend rebuild of [Island](https://techcrunch.com/2026/11/16/island-is-a-new-screen-time-app-that-turns-staying-off-your-phone-into-a-game/),
 the YC startup that turns your screen time into a farm you share with a friend.
 This version reads your **real Apple Screen Time** on your Mac, shows your farm (and
@@ -106,6 +108,18 @@ The crops underneath the scenes follow these (they drive the ASCII view and the 
 - **Mac:** `knowledgeC.db` `/app/usage` rows, with Biome `local/` as a fallback.
 - Intervals are merged (no double counting), split at local midnight, and sessions under
   1 s or over 12 h are dropped (`screentime/daily.py`).
+
+## Development
+
+No dependencies, so tests are plain `unittest`:
+
+```sh
+python3 -m unittest -v
+```
+
+They cover the farm rules, data/config validation, Screen Time day splitting, the chart,
+scene choice, the iTerm2 image escapes, friend sync through a real (local) git repo and
+the CLI end to end. CI runs them on macOS with Python 3.9 and 3.13.
 
 ## Artwork
 

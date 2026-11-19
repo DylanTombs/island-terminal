@@ -66,20 +66,22 @@ def _cell(minutes, lo: int, hi: int, limit: int, color, on: bool) -> str | None:
     return c.paint(EIGHTHS[eighth], rgb(OVER_RGB if over else color), on)
 
 
-def _columns(mine: dict, friend: dict | None, d: date) -> list[tuple]:
+def _columns(mine: dict, friend: dict | None, d: date, limits: tuple[int, int]) -> list[tuple]:
+    """(minutes, colour, that person's limit) per bar column for one day."""
     key = d.isoformat()
+    me = (mine.get(key), ME_RGB, limits[0])
+    gap = (None, None, None)
     if friend is None:
-        return [(mine.get(key), ME_RGB)] * 3 + [(None, None)] * 2
-    return ([(mine.get(key), ME_RGB)] * 2 + [(friend.get(key), FRIEND_RGB)] * 2
-            + [(None, None)])
+        return [me] * 3 + [gap] * 2
+    return [me] * 2 + [(friend.get(key), FRIEND_RGB, limits[1])] * 2 + [gap]
 
 
 def _row(cols, lo, hi, limit, label, on) -> str:
     on_limit = lo < limit <= hi
     tick = "┼" if on_limit else "┤"
     out = [c.paint(f"{label:>3} {tick}", c.DIM, on)]
-    for minutes, color in cols:
-        cell = _cell(minutes, lo, hi, limit, color, on)
+    for minutes, color, own_limit in cols:
+        cell = _cell(minutes, lo, hi, own_limit, color, on)
         if cell:
             out.append(cell)
         else:
@@ -94,7 +96,8 @@ def render_chart(mine: dict, limit: int, today: date, on: bool,
     values = [v for src in (mine, friend or {}) for d in dates
               if (v := src.get(d.isoformat())) is not None]
     rows, per_row = _scale(values, limit)
-    cols = [col for d in dates for col in _columns(mine, friend, d)]
+    limits = (limit, friend_limit if friend_limit is not None else limit)
+    cols = [col for d in dates for col in _columns(mine, friend, d, limits)]
     lines = [c.paint("  screen time · last 14 days", c.BOLD, on)]
     for r in range(rows, 0, -1):
         hours = r * per_row // 60
@@ -104,7 +107,6 @@ def render_chart(mine: dict, limit: int, today: date, on: bool,
     lines.extend(_day_labels(dates, today, on))
     lines.append("")
     lines.append(_legend(names, friend is not None, limit, on))
-    limits = (limit, friend_limit if friend_limit is not None else limit)
     lines.extend(_summaries(mine, friend, names, limits, today, on))
     return lines
 

@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+LIMIT = 240  # the story is told against a 4h limit, whatever your config says
+NAMES = ("You", "Sam")
+
 # Oldest first, ending today.
 _ME = [300, 210, 190, 230, 280, 200, 215, 225, 180, 235, 220, 250, 205, 190,
        410, 380, 340, 395, 360, 330, 375,

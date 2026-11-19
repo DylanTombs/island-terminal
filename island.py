@@ -63,8 +63,9 @@ def _people(cfg, args) -> tuple[list[render.Person], list[str]]:
     notes = []
     if args.demo:
         mine, theirs = demo.sample(today, args.demo)
-        return [render.Person(cfg.name if cfg.name != "Me" else "Dylan", mine, cfg.limit_minutes, "wheat"),
-                render.Person(cfg.friend or "Sam", theirs, cfg.friend_limit, "flower")], notes
+        me_name = cfg.name if cfg.name != config.Config.name else demo.NAMES[0]
+        return [render.Person(me_name, mine, demo.LIMIT, "wheat"),
+                render.Person(cfg.friend or demo.NAMES[1], theirs, demo.LIMIT, "flower")], notes
     mine, bad = store.read_days(store.my_path(cfg.name))
     if not mine:
         notes.append("no data yet: run `island sync` or `island log <minutes>`")

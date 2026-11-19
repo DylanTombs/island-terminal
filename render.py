@@ -167,7 +167,7 @@ def show(people: list[Person], today: date, on: bool, animate: bool,
          size: str = pixelview.DEFAULT_SIZE) -> None:
     out = sys.stdout
     pixel = use_pixel_art(art_mode, on, size)
-    images = image_panels(people, today, on) if pixel else None
+    images = image_panels(people, today, on) if art_mode != "ascii" else None
     if images:
         out.write(images)
     else:
