@@ -45,12 +45,6 @@ class Step(unittest.TestCase):
 
 
 class Rules(unittest.TestCase):
-    def test_day_bad_if_anyone_over(self):
-        key = TODAY.isoformat()
-        self.assertTrue(farm.day_bad(key, [({key: 100}, 240), ({key: 300}, 240)]))
-        self.assertFalse(farm.day_bad(key, [({key: 100}, 240), ({key: 200}, 240)]))
-        self.assertIsNone(farm.day_bad(key, [({}, 240)]))
-
     def test_personal_streak_counts_back_from_today(self):
         self.assertEqual(farm.personal_streak(days(300, 100, 100, 100), 240, TODAY), 3)
 
@@ -58,14 +52,23 @@ class Rules(unittest.TestCase):
         d = days(100, 100, end=TODAY - timedelta(days=1))
         self.assertEqual(farm.personal_streak(d, 240, TODAY), 2)
 
-    def test_simulate_links_both_farms(self):
-        mine, theirs = days(100, 100, 100), days(100, 100, 400)
-        before, after = farm.simulate([(mine, 240), (theirs, 240)], TODAY)
-        self.assertEqual(after.recent[-1], True)
+    def test_simulate_returns_yesterday_and_today(self):
+        before, after = farm.simulate(days(100, 100, 400), 240, TODAY)
         self.assertEqual(before.streak, 2)
+        self.assertEqual(after.recent[-1], True)
+        self.assertEqual(after.streak, 0)
+
+    def test_simulate_skips_days_without_data(self):
+        d = {**days(100, end=TODAY - timedelta(days=5)), **days(100)}
+        _, after = farm.simulate(d, 240, TODAY)
+        self.assertEqual(after.streak, 2)
+
+    def test_simulate_without_today(self):
+        before, after = farm.simulate(days(100, end=TODAY - timedelta(days=1)), 240, TODAY)
+        self.assertEqual(before, after)
 
     def test_simulate_empty(self):
-        self.assertEqual(farm.simulate([({}, 240)], TODAY), (Farm(), Farm()))
+        self.assertEqual(farm.simulate({}, 240, TODAY), (Farm(), Farm()))
 
 
 if __name__ == "__main__":

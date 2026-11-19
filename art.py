@@ -51,7 +51,6 @@ class Style:
 
 STYLES = {
     "wheat": Style(c.RED, "@", c.BRIGHT_YELLOW),
-    "flower": Style(c.BLUE, "*", c.MAGENTA),
 }
 
 

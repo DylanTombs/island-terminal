@@ -32,13 +32,16 @@ class SceneChoice(unittest.TestCase):
         self.assertEqual(self.cond({}), "winter")
 
     def test_demo_story(self):
-        """Parched means over today; the demo friend is over iff their farm isn't thriving."""
-        for mode, want in (("wilt", "drought"), ("grow", "thriving"), ("abandon", "overgrown")):
-            me, sam = demo.sample(TODAY, mode)
+        """Each demo mode lands on its scene; you're over today iff it isn't thriving."""
+        for mode, want in (("grow", "thriving"), ("wilt", "drought"), ("abandon", "overgrown")):
+            d = demo.sample(TODAY, mode)
             with self.subTest(mode=mode):
-                self.assertEqual(pixelview.person_condition(me, demo.LIMIT, TODAY), "thriving")
-                self.assertEqual(pixelview.person_condition(sam, demo.LIMIT, TODAY), want)
-                self.assertEqual(sam[TODAY.isoformat()] > demo.LIMIT, want != "thriving")
+                self.assertEqual(pixelview.person_condition(d, demo.LIMIT, TODAY), want)
+                self.assertEqual(d[TODAY.isoformat()] > demo.LIMIT, want != "thriving")
+
+    def test_demo_rejects_unknown_mode(self):
+        with self.assertRaises(ValueError):
+            demo.sample(TODAY, "nope")
 
 
 class Chart(unittest.TestCase):
@@ -53,11 +56,17 @@ class Chart(unittest.TestCase):
         self.assertIn("not enough history", chart.summary({}, TODAY))
 
     def test_plain_render_has_no_escapes_and_fixed_width(self):
-        me, sam = demo.sample(TODAY)
-        lines = chart.render_chart(me, 240, TODAY, False, sam, ("You", "Sam"), 240)
+        lines = chart.render_chart(demo.sample(TODAY), 240, TODAY, False)
         self.assertFalse(any("\x1b" in line for line in lines))
         axis = next(line for line in lines if "└" in line)
-        self.assertEqual(len(axis), 4 + 1 + chart.DAYS * chart.GROUP_W)
+        self.assertEqual(len(axis), chart.WIDTH)
+
+    def test_bars_red_only_above_limit(self):
+        red = chart.rgb(chart.OVER_RGB)
+        for minutes, want_red in ((200, False), (300, True)):
+            lines = chart.render_chart({TODAY.isoformat(): minutes}, 240, TODAY, True)
+            with self.subTest(minutes=minutes):
+                self.assertEqual(any(red in line for line in lines[1:-4]), want_red)
 
 
 class Images(unittest.TestCase):

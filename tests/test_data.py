@@ -47,9 +47,13 @@ class Config(unittest.TestCase):
     def test_missing_file_gives_defaults(self):
         self.assertEqual(config.load(Path("/nonexistent/config.json")), config.Config())
 
-    def test_values_and_friend_limit_fallback(self):
-        cfg = self._load({"name": "Alex", "friend": "Jo", "limit_minutes": 300})
-        self.assertEqual((cfg.name, cfg.friend, cfg.friend_limit), ("Alex", "Jo", 300))
+    def test_values(self):
+        cfg = self._load({"name": "Alex", "limit_minutes": 300, "source": "mac"})
+        self.assertEqual((cfg.name, cfg.limit_minutes, cfg.source), ("Alex", 300, "mac"))
+
+    def test_old_friend_keys_are_ignored(self):
+        cfg = self._load({"name": "Alex", "friend": "Jo", "share_repo": "git@x:y.git"})
+        self.assertEqual(cfg, config.Config(name="Alex"))
 
     def test_rejects_bad_input(self):
         for bad in ("{oops", "[]", {"limit_minutes": 0}, {"limit_minutes": True},

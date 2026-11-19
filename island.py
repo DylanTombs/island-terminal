@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""island: your Apple Screen Time as an ASCII farm you share with a friend."""
+"""island: your Apple Screen Time as a farm in your terminal."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ import demo
 import farm as farm_rules
 import pixelview
 import render
-import share
 import store
 from screentime import biome, sources
 
@@ -45,7 +44,6 @@ def cmd_sync(cfg, args) -> int:
     apple = src.days if src else {}
     days = {**existing, **apple, **manual}
     store.write_days(path, days)
-    warn = share.sync(cfg, days)
     if not args.quiet:
         label = src.name if src else "no source"
         today = days.get(date.today().isoformat())
@@ -53,51 +51,33 @@ def cmd_sync(cfg, args) -> int:
               f"{chart.fmt_hm(today) if today is not None else '--'} -> {path.name}")
     for line in notes if not args.quiet or not src else []:
         print(line, file=sys.stderr)
-    if warn:
-        print(warn, file=sys.stderr)
     return 0
 
 
-def _people(cfg, args) -> tuple[list[render.Person], list[str]]:
-    today = date.today()
-    notes = []
+def _person(cfg, args) -> tuple[render.Person, list[str]]:
     if args.demo:
-        mine, theirs = demo.sample(today, args.demo)
-        me_name = cfg.name if cfg.name != config.Config.name else demo.NAMES[0]
-        return [render.Person(me_name, mine, demo.LIMIT, "wheat"),
-                render.Person(cfg.friend or demo.NAMES[1], theirs, demo.LIMIT, "flower")], notes
-    mine, bad = store.read_days(store.my_path(cfg.name))
-    if not mine:
+        name = cfg.name if cfg.name != config.Config.name else demo.NAME
+        return render.Person(name, demo.sample(date.today(), args.demo), demo.LIMIT), []
+    days, bad = store.read_days(store.my_path(cfg.name))
+    notes = []
+    if not days:
         notes.append("no data yet: run `island sync` or `island log <minutes>`")
     if bad:
         notes.append(f"skipped {bad} malformed entr{'y' if bad == 1 else 'ies'} in my data file")
-    people = [render.Person(cfg.name, mine, cfg.limit_minutes, "wheat")]
-    if cfg.friend:
-        theirs, bad = share.read_friend(cfg)
-        if bad:
-            notes.append(f"skipped {bad} malformed entr{'y' if bad == 1 else 'ies'} in {cfg.friend}'s file")
-        if not theirs:
-            notes.append(f"no data from {cfg.friend} yet")
-        people.append(render.Person(cfg.friend, theirs, cfg.friend_limit, "flower"))
-    return people, notes
+    return render.Person(cfg.name, days, cfg.limit_minutes), notes
 
 
 def cmd_show(cfg, args) -> int:
-    people, notes = _people(cfg, args)
+    person, notes = _person(cfg, args)
     on = c.color_enabled()
     animate = sys.stdout.isatty() and args.anim
-    render.show(people, date.today(), on, animate, notes=notes, art_mode=args.art, size=args.size)
+    render.show(person, date.today(), on, animate, notes=notes, art_mode=args.art, size=args.size)
     return 0
 
 
 def cmd_graph(cfg, args) -> int:
-    people, notes = _people(cfg, args)
-    me, *rest = people
-    friend = rest[0] if rest else None
-    lines = chart.render_chart(me.days, me.limit, date.today(), c.color_enabled(),
-                               friend.days if friend else None,
-                               (me.name, friend.name if friend else ""),
-                               friend.limit if friend else None)
+    person, notes = _person(cfg, args)
+    lines = chart.render_chart(person.days, person.limit, date.today(), c.color_enabled())
     print("\n".join(lines + notes))
     return 0
 
@@ -136,7 +116,7 @@ def _ts(t: float | None) -> str:
 
 def cmd_doctor(cfg, args) -> int:
     print(f"config: {config.CONFIG_PATH if config.CONFIG_PATH.exists() else 'defaults (no config.json)'}")
-    print(f"name {cfg.name} · friend {cfg.friend or '--'} · limit {chart.fmt_hm(cfg.limit_minutes)} · source {cfg.source}\n")
+    print(f"name {cfg.name} · limit {chart.fmt_hm(cfg.limit_minutes)} · source {cfg.source}\n")
     try:
         devices = sources.remote_devices()
         names = sources.device_names()
@@ -191,13 +171,13 @@ def _doctor_table(srcs, cfg) -> None:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="island", description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("sync", help="read Screen Time, save today's minutes, swap with friend")
+    s = sub.add_parser("sync", help="read Screen Time and save each day's minutes")
     s.add_argument("--quiet", action="store_true")
     for name, helptext in (("show", "draw the farm(s) and graph"), ("graph", "just the graph")):
         sp = sub.add_parser(name, help=helptext)
-        sp.add_argument("--demo", nargs="?", const="wilt", choices=("wilt", "grow", "abandon"),
-                        help="sample data (wilt, default: friend over today, farm parched; "
-                             "grow: friend under; abandon: friend over 3 days running)")
+        sp.add_argument("--demo", nargs="?", const=demo.MODES[0], choices=demo.MODES,
+                        help="sample data: grow (default, under today: thriving), wilt (over "
+                             "today: drought), abandon (over 3 days running: overgrown)")
         sp.add_argument("--anim", action="store_true", help="play today's grow/wilt animation")
         sp.add_argument("--no-anim", action="store_true", help=argparse.SUPPRESS)  # default now
         sp.add_argument("--art", choices=("auto", "pixel", "ascii"), default="auto",

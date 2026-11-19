@@ -5,7 +5,6 @@
   grows one stage, so the field fills up left to right over weeks.
 - Bad day: the newest healthy crop wilts. If one is already wilted (two bad days
   running), the wilted crop dies back a stage instead.
-- Linked rule: a day is bad for BOTH farms if either friend went over their limit.
 """
 
 from __future__ import annotations
@@ -66,14 +65,6 @@ def step(farm: Farm, bad: bool) -> Farm:
     return Farm(plots, 0 if bad else farm.streak + 1, (farm.recent + (bad,))[-7:])
 
 
-def day_bad(day: str, people: list[tuple[dict, int]]) -> bool | None:
-    """True if anyone with data that day went over; None if nobody has data."""
-    seen = [(days[day], limit) for days, limit in people if day in days]
-    if not seen:
-        return None
-    return any(m > limit for m, limit in seen)
-
-
 def personal_streak(days: dict, limit: int, today: date) -> int:
     """Days in a row under the limit, ending today (or yesterday if today is empty)."""
     d = today if today.isoformat() in days else today - timedelta(days=1)
@@ -84,19 +75,17 @@ def personal_streak(days: dict, limit: int, today: date) -> int:
     return n
 
 
-def simulate(people: list[tuple[dict, int]], today: date) -> tuple[Farm, Farm]:
-    """Returns (farm as of yesterday, farm including today). Linked: both friends'
-    farms see the same good/bad days, so both share this result's shape."""
-    all_days = [d for days, _ in people for d in days]
-    if not all_days:
+def simulate(days: dict, limit: int, today: date) -> tuple[Farm, Farm]:
+    """Returns (farm as of yesterday, farm including today), replaying every day with data."""
+    if not days:
         return Farm(), Farm()
-    start = max(date.fromisoformat(min(all_days)), today - timedelta(days=HISTORY_DAYS))
+    start = max(date.fromisoformat(min(days)), today - timedelta(days=HISTORY_DAYS))
     farm = Farm()
     d = start
     while d < today:
-        bad = day_bad(d.isoformat(), people)
-        if bad is not None:
-            farm = step(farm, bad)
+        key = d.isoformat()
+        if key in days:
+            farm = step(farm, days[key] > limit)
         d += timedelta(days=1)
-    bad_today = day_bad(today.isoformat(), people)
-    return farm, (farm if bad_today is None else step(farm, bad_today))
+    key = today.isoformat()
+    return farm, (step(farm, days[key] > limit) if key in days else farm)

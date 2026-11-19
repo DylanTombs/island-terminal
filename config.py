@@ -19,25 +19,16 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class Config:
     name: str = "Me"
-    friend: str | None = None
     limit_minutes: int = DEFAULT_LIMIT
-    friend_limit_minutes: int | None = None
-    share_repo: str | None = None
     iphone_device_id: str | None = None
     source: str = "auto"  # auto | iphone | mac
-
-    @property
-    def friend_limit(self) -> int:
-        return self.friend_limit_minutes or self.limit_minutes
 
 
 def slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "me"
 
 
-def _limit(value, key: str) -> int | None:
-    if value is None:
-        return None
+def _limit(value, key: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 1440:
         raise ConfigError(f"config.json: {key} must be minutes between 1 and 1440")
     return value
@@ -57,10 +48,7 @@ def load(path: Path = CONFIG_PATH) -> Config:
         raise ConfigError("config.json: source must be auto, iphone or mac")
     return Config(
         name=str(raw.get("name") or "Me"),
-        friend=str(raw["friend"]) if raw.get("friend") else None,
         limit_minutes=_limit(raw.get("limit_minutes", DEFAULT_LIMIT), "limit_minutes"),
-        friend_limit_minutes=_limit(raw.get("friend_limit_minutes"), "friend_limit_minutes"),
-        share_repo=raw.get("share_repo") or None,
         iphone_device_id=raw.get("iphone_device_id") or None,
         source=source,
     )
